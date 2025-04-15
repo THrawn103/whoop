@@ -1,15 +1,9 @@
-import PeripheralList from "@/components/PeripheralList";
+import ConnectedState from "@/components/bluetooth/ConnectedState";
+import DisconnectedState from "@/components/bluetooth/DisconnectedState";
+import { PeripheralServices } from "@/types/bluetooth";
 import { handleAndroidPermissions } from "@/utils/permission";
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-  Alert,
-  Linking,
-} from "react-native";
+import { View, Text, StyleSheet, Platform, Alert, Linking } from "react-native";
 import BleManager, {
   BleDisconnectPeripheralEvent,
   BleManagerDidUpdateValueForCharacteristicEvent,
@@ -18,29 +12,13 @@ import BleManager, {
   BleScanMode,
   Peripheral,
 } from "react-native-ble-manager";
+
 declare module "react-native-ble-manager" {
   interface Peripheral {
     connected?: boolean;
     connecting?: boolean;
   }
 }
-
-type WriteArgs = {
-  data: number[];
-  peripheralId: string;
-  serviceId: string;
-  receive: string;
-  transfer: string;
-};
-
-type ReadArgs = { peripheral: string; service: string; receive: string };
-
-export type PeripheralServices = {
-  peripheralId: string;
-  serviceId: string;
-  transfer: string;
-  receive: string;
-};
 
 const SECONDS_TO_SCAN_FOR = 5;
 const SERVICE_UUIDS: string[] = [];
@@ -56,21 +34,16 @@ const BluetoothDemoScreen: React.FC = () => {
     new Map<Peripheral["id"], Peripheral>()
   );
   const [isConnected, setIsConnected] = useState(false);
-  const [characteristics, setCharacteristics] = useState<
-    PeripheralServices | undefined
-  >(undefined);
+  const [bleService, setBleService] = useState<PeripheralServices | undefined>(
+    undefined
+  );
 
   useEffect(() => {
-    try {
-      BleManager.start({ showAlert: false })
-        .then(() => console.debug("BleManager started."))
-        .catch((error: any) =>
-          console.error("BeManager could not be started.", error)
-        );
-    } catch (error) {
-      console.error("unexpected error starting BleManager.", error);
-      return;
-    }
+    BleManager.start({ showAlert: false })
+      .then(() => console.debug("BleManager started."))
+      .catch((error: any) =>
+        console.error("BeManager could not be started.", error)
+      );
 
     const listeners: any[] = [
       BleManager.onDiscoverPeripheral(handleDiscoverPeripheral),
@@ -89,7 +62,6 @@ const BluetoothDemoScreen: React.FC = () => {
         listener.remove();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDisconnectedPeripheral = (
@@ -127,12 +99,12 @@ const BluetoothDemoScreen: React.FC = () => {
 
   const handleDiscoverPeripheral = (peripheral: Peripheral) => {
     console.debug("[handleDiscoverPeripheral] new BLE peripheral=", peripheral);
-    // if (!peripheral.name) {
-    //   peripheral.name = "NO NAME";
-    // }
-    // setPeripherals((map) => {
-    //   return new Map(map.set(peripheral.id, peripheral));
-    // });
+    if (!peripheral.name) {
+      peripheral.name = "NO NAME";
+    }
+    setPeripherals((map) => {
+      return new Map(map.set(peripheral.id, peripheral));
+    });
   };
 
   const connectPeripheral = async (
@@ -176,7 +148,7 @@ const BluetoothDemoScreen: React.FC = () => {
             transfer: TRANSFER_CHARACTERISTIC_UUID,
             receive: RECEIVE_CHARACTERISTIC_UUID,
           };
-          setCharacteristics(peripheralParameters);
+          setBleService(peripheralParameters);
           setIsConnected(true);
         }
         setPeripherals((map) => {
@@ -198,9 +170,12 @@ const BluetoothDemoScreen: React.FC = () => {
                     characteristic.characteristic,
                     descriptor.uuid
                   );
+                  console.log(
+                    `[readDescriptor] Descriptor ${data} for ${peripheral.id} `
+                  );
                 } catch (error) {
                   console.error(
-                    `[connectPeripheral][${peripheral.id}] failed to retrieve descriptor ${descriptor} for characteristic ${characteristic}:`,
+                    `[connectPeripheral][${peripheral.id}] failed to retrieve descriptor ${descriptor.value} for characteristic ${characteristic.characteristic}:`,
                     error
                   );
                 }
@@ -228,7 +203,7 @@ const BluetoothDemoScreen: React.FC = () => {
   const disconnectPeripheral = async (peripheralId: string) => {
     try {
       await BleManager.disconnect(peripheralId);
-      setCharacteristics(undefined);
+      setBleService(undefined);
       setPeripherals(new Map());
       setIsConnected(false);
     } catch (error) {
@@ -256,7 +231,6 @@ const BluetoothDemoScreen: React.FC = () => {
     const state = await BleManager.checkState();
 
     console.log(state);
-    
 
     if (state === "off") {
       if (Platform.OS == "ios") {
@@ -299,86 +273,50 @@ const BluetoothDemoScreen: React.FC = () => {
     }
   };
 
-  const write = async (args: WriteArgs) => {
+  const write = async () => {
     const MTU = 255;
-    if (characteristics) {
-      await BleManager.startNotification(
-        args.peripheralId,
-        args.serviceId,
-        args.receive
-      );
-      await sleep(900);
+    if (bleService) {
+      const data = Array.from(new TextEncoder().encode("Hello World"));
       await BleManager.write(
-        args.peripheralId,
-        args.serviceId,
-        args.transfer,
-        args.data,
+        bleService.peripheralId,
+        bleService.serviceId,
+        bleService.transfer,
+        data,
         MTU
       );
     }
   };
-  
 
-  const read = async (args: ReadArgs) => {
-    const response = await BleManager.read(
-      args.service,
-      args.peripheral,
-      args.receive
-    );
-    return response;
+  const read = async () => {
+    if (bleService) {
+      const response = await BleManager.read(
+        bleService.serviceId,
+        bleService.peripheralId,
+        bleService.receive
+      );
+      return response;
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Bluetooth Demo</Text>
-      <TouchableOpacity style={styles.scanButton} onPress={startScan}>
-        <Text style={styles.scanButtonText}>
-          {isScanning ? "Scanning..." : "Start Scan"}
-        </Text>
-      </TouchableOpacity>
-      {Array.from(peripherals.values()).length > 0 ? (
-        <PeripheralList
-          onConnect={connectPeripheral}
+      {!isConnected ? (
+        <DisconnectedState
           peripherals={Array.from(peripherals.values())}
+          isScanning={isScanning}
+          onScanPress={startScan}
+          onConnect={connectPeripheral}
         />
       ) : (
-        <Text style={styles.emptyText}>No peripherals found</Text>
-      )}
-      {isConnected && characteristics && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            onPress={() => {
-              read({
-                peripheral: characteristics.peripheralId,
-                receive: characteristics.receive,
-                service: characteristics.serviceId,
-              });
-            }}
-            style={styles.button}
-          >
-            <Text style={styles.buttonText}>READ</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              write({
-                data: [1, 2, 3, 4, 5, 6],
-                receive: characteristics.receive,
-                serviceId: characteristics.serviceId,
-                transfer: characteristics.transfer,
-                peripheralId: characteristics.peripheralId,
-              });
-            }}
-            style={styles.button}
-          >
-            <Text style={styles.buttonText}>WRITE</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => disconnectPeripheral(characteristics?.peripheralId)}
-            style={styles.disconnectButton}
-          >
-            <Text style={styles.buttonText}>DISCONNECT</Text>
-          </TouchableOpacity>
-        </View>
+        bleService && (
+          <ConnectedState
+            onRead={read}
+            onWrite={write}
+            bleService={bleService}
+            onDisconnect={disconnectPeripheral}
+          />
+        )
       )}
     </View>
   );
@@ -390,53 +328,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
     paddingVertical: "10%",
     paddingHorizontal: 20,
-    // alignItems: 'center',
   },
   header: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 16,
     color: "#333",
-  },
-  scanButton: {
-    backgroundColor: "#007AFF",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  scanButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    textAlign: "center",
-    fontWeight: "500",
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 20,
-  },
-  actionButtons: {
-    flexDirection: "row",
-    marginTop: 16,
-  },
-  button: {
-    backgroundColor: "#007AFF",
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 8,
-    flexGrow: 1,
-  },
-  disconnectButton: {
-    backgroundColor: "red",
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 8,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    textAlign: "center",
-    fontWeight: "500",
   },
 });
 
