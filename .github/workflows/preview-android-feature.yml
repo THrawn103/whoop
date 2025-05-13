@@ -3,12 +3,12 @@ name: Preview Android Build (Feature Branch)
 on:
   pull_request:
     types: [opened, synchronize]
-    branches-ignore: []
-    paths-ignore: ["docs/**"]
+    branches: [main]
+    # paths-ignore: ["docs/**"]
 
 jobs:
   preview-android:
-    if: startsWith(github.head_ref, 'feature/')
+    # if: startsWith(github.head_ref, 'feature/')
     runs-on: ubuntu-latest
 
     steps:
@@ -16,9 +16,17 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
+          cache: yarn
 
-      - run: npm install -g eas-cli
-      - run: eas login --token ${{ secrets.EAS_TOKEN }}
+      - name: 🏗 Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
+
+      - name: 📦 Install dependencies
+        run: yarn install
+
 
      - name: Trigger EAS Android build (preview)
         id: eas_build
