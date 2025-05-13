@@ -1,0 +1,38 @@
+name: Preview Android Build (Feature Branch)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches-ignore: []
+    paths-ignore: ["docs/**"]
+
+jobs:
+  preview-android:
+    if: startsWith(github.head_ref, 'feature/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - run: npm install -g eas-cli
+      - run: eas login --token ${{ secrets.EAS_TOKEN }}
+
+     - name: Trigger EAS Android build (preview)
+        id: eas_build
+        run: |
+          eas build --platform android --profile preview --non-interactive --json > build.json
+          BUILD_URL=$(cat build.json | jq -r '.[0].artifacts.buildUrl')
+          echo "BUILD_URL=$BUILD_URL" >> $GITHUB_ENV
+
+      - name: Post PR comment with preview link
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "$PR_URL" --body "🚀 Preview APK is ready! [Download here]($BUILD_URL)"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          BUILD_URL: ${{ env.BUILD_URL }}
