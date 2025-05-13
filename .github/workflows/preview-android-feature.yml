@@ -1,6 +1,9 @@
 name: Preview Android Build (Feature Branch)
 
 on:
+  push:
+    branches:
+      - "**"
   pull_request:
     branches: [main]
 
