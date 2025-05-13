@@ -24,27 +24,5 @@
         "resourceClass": "m-medium"
       }
     }
-  },
-  "submit": {
-    "preview": {
-      "ios": {
-        "appleId": "infinitymichael7@gmail.com",
-        "ascAppId": "",
-        "appleTeamId": ""
-      },
-      "android": {
-        "track": "internal"
-      }
-    },
-    "production": {
-      "ios": {
-        "appleId": "infinitymichael7@gmail.com",
-        "ascAppId": "",
-        "appleTeamId": ""
-      },
-      "android": {
-        "track": "production"
-      }
-    }
   }
 }
