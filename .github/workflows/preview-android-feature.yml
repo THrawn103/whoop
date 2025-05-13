@@ -1,22 +1,28 @@
 name: Preview Android Build (Feature Branch)
 
 on:
-  push:
-    branches:
-      - "**"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
+    name: Build Android Preview
+    # Only run this workflow for feature branches
+    if: startsWith(github.head_ref, 'feature/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 18
-         cache: yarn
-
+          cache: yarn
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
@@ -27,8 +33,7 @@ jobs:
       - name: 📦 Install dependencies
         run: yarn install
 
-
-     - name: Trigger EAS Android build (preview)
+      - name: Trigger EAS Android build (preview)
         id: eas_build
         run: |
           eas build --platform android --profile preview --non-interactive --json > build.json
@@ -36,11 +41,9 @@ jobs:
           echo "BUILD_URL=$BUILD_URL" >> $GITHUB_ENV
 
       - name: Post PR comment with preview link
-        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr comment "$PR_URL" --body "🚀 Preview APK is ready! [Download here]($BUILD_URL)"
-        env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           BUILD_URL: ${{ env.BUILD_URL }}
+        run: |
+          gh pr comment "$PR_URL" --body "🚀 Preview APK is ready! [Download here]($BUILD_URL)"
