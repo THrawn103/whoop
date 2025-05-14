@@ -2,18 +2,18 @@ name: Preview Android Build (Feature Branch)
 
 on:
   pull_request:
-    branches: [main]
+    branches: [dev] 
     paths-ignore:
       - "**.md"
       - "docs/**"
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened] 
 
 jobs:
   build:
     name: Build Android Preview
-    # Only run this workflow for feature branches
-    if: startsWith(github.head_ref, 'feature/')
+    if: startsWith(github.head_ref, 'feature/') 
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -27,7 +27,7 @@ jobs:
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
-          eas-version: 16.1.0
+          eas-version: latest
           token: ${{ secrets.EAS_TOKEN }}
 
       - name: Install dependencies
