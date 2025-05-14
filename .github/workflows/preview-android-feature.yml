@@ -1,0 +1,38 @@
+name: Preview Android Build (Feature Branch)
+
+on:
+  pull_request:
+    branches: [dev] 
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+    types: [opened, reopened] 
+
+jobs:
+  build:
+    name: Build Android Preview
+    if: startsWith(github.head_ref, 'feature/') 
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: yarn
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Trigger EAS Android build (preview)
+        id: eas_build
+        run: eas build --platform android --profile preview --non-interactive 
