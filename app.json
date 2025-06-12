@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "react-native-demo-ble-app",
-    "slug": "bluetoothdemo",
+    "slug": "whoop-20",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -16,7 +16,12 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.teamcmcwebcode.bluetoothdemo"
+      "package": "com.teamcmcwebcode.bluetoothdemo",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -52,13 +57,11 @@
         "origin": false
       },
       "eas": {
-        "projectId": "77577e9f-019f-4c83-8cfa-e8bdae50a538"
+        "projectId": "394c80af-4500-4682-b902-df121e453071"
       }
     },
-    "owner": "team-cmcwebcode",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "owner": "thrawn50",
+    "runtimeVersion":"1.0.0",
     "updates": {
       "url": "https://u.expo.dev/77577e9f-019f-4c83-8cfa-e8bdae50a538"
     }
